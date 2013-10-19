@@ -10,27 +10,41 @@ var (
 )
 
 // A block library is a collection of possible block templates
-type BlockLibrary map[string]Block
+type BlockLibrary map[string]*BlockTemplate
+
+// TODO: library should probably become a struct at some point...
+func register(t *BlockTemplate){
+	Library[t.BlockType] = t
+}
 
 func BuildLibrary() {
 	log.Println("building block library")
-	Library = make(map[string]Block)
+	Library = make(map[string]*BlockTemplate)
 
-	// BLOCKS
-
-	Library["ticker"] = Block{
-		Template: &BlockTemplate{
-			BlockType:  "ticker",
+	templates := []*BlockTemplate{
+		&BlockTemplate{
+			BlockType: "ticker",
 			RouteNames: []string{},
+			Routine: Ticker,
 		},
-		Routine: Ticker,
+		&BlockTemplate{
+			BlockType: "connection",
+			RouteNames: []string{"last_seen"},
+			Routine: Connection,
+		},
+		&BlockTemplate{
+			BlockType: "tolog",
+			RouteNames: []string{},
+			Routine: ToLog,
+		},
+		&BlockTemplate{
+			BlockType: "random",
+			RouteNames: []string{},
+			Routine: Random,
+		},
 	}
 
-	Library["tolog"] = Block{
-		Template: &BlockTemplate{
-			BlockType:  "tolog",
-			RouteNames: []string{},
-		},
-		Routine: ToLog,
+	for _, t := range templates {
+		Library[t.BlockType] = t
 	}
 }
