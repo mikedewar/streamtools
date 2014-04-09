@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"errors"
 	"fmt"
 	"github.com/nytlabs/streamtools/st/loghub"
 	"time"
@@ -259,7 +260,9 @@ func BlockRoutine(bi BlockInterface) {
 
 			_, ok := b.queryRoutes[msg.Route]
 			if !ok {
-				break
+				// TODO respond with a proper code
+				b.Error(errors.New("Route not found"))
+				continue
 			}
 
 			select {
