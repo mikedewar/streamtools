@@ -12,12 +12,13 @@ import (
 // specify those channels we're going to use to communicate with streamtools
 type Cache struct {
 	blocks.Block
-	queryrule chan chan interface{}
-	inrule    chan interface{}
-	in        chan interface{}
-	lookup    chan interface{}
-	out       chan interface{}
-	quit      chan interface{}
+	queryrule   chan chan interface{}
+	querylookup chan chan interface{}
+	inrule      chan interface{}
+	in          chan interface{}
+	lookup      chan interface{}
+	out         chan interface{}
+	quit        chan interface{}
 }
 
 // we need to build a simple factory so that streamtools can make new blocks of this kind
@@ -40,6 +41,7 @@ func (b *Cache) Setup() {
 
 	b.in = b.InRoute("in")
 	b.lookup = b.InRoute("lookup")
+	b.queryLookup = b.QueryRoute("lookup")
 }
 
 // Run is the block's main loop. Here we listen on the different channels we set up.
