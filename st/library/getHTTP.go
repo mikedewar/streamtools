@@ -3,11 +3,13 @@ package library
 import (
 	"encoding/json"
 	"errors"
+	"io/ioutil"
+	"net/http"
+	"strings"
+
 	"github.com/nytlabs/gojee"                 // jee
 	"github.com/nytlabs/streamtools/st/blocks" // blocks
 	"github.com/nytlabs/streamtools/st/util"
-	"io/ioutil"
-	"net/http"
 )
 
 // specify those channels we're going to use to communicate with streamtools
@@ -40,8 +42,9 @@ func (b *GetHTTP) Setup() {
 func (b *GetHTTP) Run() {
 	client := &http.Client{}
 	var tree *jee.TokenTree
-	var path string
+	var path, headerString string
 	var err error
+	headers := make(map[string]string)
 	for {
 		select {
 		case ruleI := <-b.inrule:
@@ -60,6 +63,15 @@ func (b *GetHTTP) Run() {
 			if err != nil {
 				b.Error(err)
 				continue
+			}
+			headerString, err = util.ParseString(ruleI, "Header")
+			if err != nil {
+				b.Error(err)
+				continue
+			}
+			for _, headerpair := range strings.Split(headerString, ",") {
+				hh := strings.Split(headerpair, ":")
+				headers[hh[0]] = hh[1]
 			}
 		case <-b.quit:
 			// quit the block
@@ -80,7 +92,12 @@ func (b *GetHTTP) Run() {
 				continue
 			}
 
-			resp, err := client.Get(urlString)
+			req, err := http.NewRequest("GET", urlString, nil)
+			for header := range headers {
+				req.Header.Add(header, headers[header])
+			}
+
+			resp, err := client.Do(req)
 			if err != nil {
 				b.Error(err)
 				continue
@@ -106,7 +123,8 @@ func (b *GetHTTP) Run() {
 		case MsgChan := <-b.queryrule:
 			// deal with a query request
 			MsgChan <- map[string]interface{}{
-				"Path": path,
+				"Path":   path,
+				"Header": headerString,
 			}
 
 		}
