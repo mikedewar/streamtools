@@ -80,6 +80,7 @@ func (e *ToEmail) closeClient() error {
 	}
 	err = e.client.Quit()
 	if err != nil {
+		e.Error("Quit failed:" + err.Error())
 		// quit failed. try a simple close
 		err = e.client.Close()
 	}
@@ -243,20 +244,27 @@ const maxRetries = 5
 func (e *ToEmail) resetClient() bool {
 	var err error
 	wait := normWait
-	connected := false
-	// setup to retry reconnect if it fails
-	for retries := 1; retries < maxRetries; retries++ {
-		err = e.reconnect(wait)
-		if err == nil {
-			// if we succeeded, carry on.
-			connected = true
-			break
-		}
-		// incremental backoff if we failed first attempt
-		wait = time.Duration(errWait*retries) * time.Second
-		e.Error(fmt.Sprintf("Problems reconnecting to SMTP: %s. Trying again with a delay of %s", err.Error(), wait))
+	/*
+		connected := false
+		// setup to retry reconnect if it fails
+			for retries := 1; retries < maxRetries; retries++ {
+				err = e.reconnect(wait)
+				if err == nil {
+					// if we succeeded, carry on.
+					connected = true
+					break
+				}
+				// incremental backoff if we failed first attempt
+				wait = time.Duration(errWait*retries) * time.Second
+				e.Error(fmt.Sprintf("Problems reconnecting to SMTP: %s. Trying again with a delay of %s", err.Error(), wait))
+			}
+	*/
+	err = e.reconnect(wait)
+	if err != nil {
+		e.Error(fmt.Sprintf("Problems reconnecting to SMTP: %s.", err.Error()))
+		return false
 	}
-	return connected
+	return true
 }
 
 // Run is the block's main loop. Here we listen on the different channels we set up.
@@ -287,7 +295,8 @@ func (e *ToEmail) Run() {
 			}
 
 			// if we do, start a new connection with new creds
-			e.resetClient()
+			go e.resetClient()
+
 		case <-e.quit:
 			if e.client != nil {
 				if err = e.closeClient(); err != nil {
